@@ -1,0 +1,3215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="PalmSense - Discover personality insights through palm analysis">
+    <meta name="theme-color" content="#7a6c5d">
+    <title>PalmSense</title>
+    <!-- Logo as favicon -->
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    
+    <style>
+/* ===== MODERN, MOBILE-FIRST CSS ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+    /* Modern Color Palette */
+    --primary: #8B7355;
+    --primary-light: #A89176;
+    --primary-dark: #6B5A45;
+    --surface: #FFFFFF;
+    --surface-light: #F8F6F3;
+    --surface-dark: #2C2A26;
+    --accent: #9A8B78;
+    --success: #8A9B7C;
+    --warning: #D4A668;
+    --error: #C97A7A;
+    --text: #2C2A26;
+    --text-light: #5D5952;
+    --text-lighter: #8A8680;
+    
+    /* Enhanced Shadows */
+    --shadow-sm: 0 2px 8px rgba(139, 115, 85, 0.08);
+    --shadow-md: 0 4px 16px rgba(139, 115, 85, 0.12);
+    --shadow-lg: 0 8px 32px rgba(139, 115, 85, 0.16);
+    --shadow-xl: 0 12px 48px rgba(139, 115, 85, 0.2);
+    
+    /* Consistent Spacing */
+    --space-xs: 0.5rem;   /* 8px */
+    --space-sm: 1rem;     /* 16px */
+    --space-md: 1.5rem;   /* 24px */
+    --space-lg: 2rem;     /* 32px */
+    --space-xl: 2.5rem;   /* 40px */
+    --space-xxl: 3.5rem;  /* 56px */
+    
+    /* Rounded Corners */
+    --radius-sm: 0.75rem;  /* 12px */
+    --radius-md: 1rem;     /* 16px */
+    --radius-lg: 1.25rem;  /* 20px */
+    --radius-xl: 1.5rem;   /* 24px */
+    --radius-full: 9999px;
+    
+    /* Smooth Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 350ms ease;
+    
+    /* Typography */
+    --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    
+    /* Safe Areas */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    
+    /* Layout */
+    --max-width: min(100%, 500px);
+    --header-height: 4rem;
+}
+
+/* ===== BASE STYLES ===== */
+body {
+    font-family: var(--font-body);
+    background: linear-gradient(135deg, #F5F2ED 0%, #F0ECE5 100%);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: var(--safe-top) var(--safe-left) var(--safe-bottom) var(--safe-right);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(139, 115, 85, 0.03) 0px, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(154, 139, 120, 0.02) 0px, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ===== APP LOADER ===== */
+.app-loader {
+    position: fixed;
+    inset: 0;
+    background: var(--surface-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity var(--transition-slow), visibility var(--transition-slow);
+    padding: var(--safe-top) var(--safe-left) var(--safe-bottom) var(--safe-right);
+}
+
+.app-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.loader-logo {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-md);
+    position: relative;
+}
+
+.loader-logo::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4rem;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    border-radius: var(--radius-full);
+}
+
+.loader-spinner {
+    width: 4rem;
+    height: 4rem;
+    position: relative;
+    margin: var(--space-xl) 0;
+}
+
+.loader-spinner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 3px solid transparent;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== APP CONTAINER ===== */
+.app-container {
+    width: 100%;
+    max-width: var(--max-width);
+    min-height: 100vh;
+    margin: 0 auto;
+    background: var(--surface);
+    position: relative;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.app-container.visible {
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+}
+
+@media (min-width: 768px) {
+    .app-container {
+        margin: var(--space-md) auto;
+        min-height: calc(100vh - 2rem);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-xl);
+        overflow: hidden;
+    }
+    
+    .app-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+}
+
+/* ===== SCREENS ===== */
+.screen {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--space-lg) var(--space-md);
+    animation: fadeInUp var(--transition-normal) forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* ===== HEADER ===== */
+.header {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    padding-top: var(--space-sm);
+}
+
+.header-with-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+.header-logo {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    background: var(--surface);
+    padding: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.app-title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.75rem, 5vw, 2.25rem);
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+
+.app-subtitle {
+    font-size: clamp(0.875rem, 3vw, 1rem);
+    color: var(--text-light);
+    font-weight: 400;
+    max-width: 32rem;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* ===== CONTENT AREA ===== */
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-bottom: var(--space-lg);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.content-scrollable::-webkit-scrollbar {
+    width: 0.375rem;
+}
+
+.content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-scrollable::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: var(--radius-full);
+}
+
+/* ===== MESSAGES ===== */
+.error-message,
+.warning-message,
+.success-message {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin: var(--space-md) 0;
+    text-align: center;
+    font-size: 0.875rem;
+    display: none;
+    animation: slideInDown var(--transition-fast);
+    backdrop-filter: blur(8px);
+    border: 1px solid transparent;
+}
+
+.error-message {
+    background: rgba(201, 122, 122, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.warning-message {
+    background: rgba(212, 166, 104, 0.1);
+    border-color: var(--warning);
+    color: var(--warning);
+}
+
+.success-message {
+    background: rgba(138, 155, 124, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.error-message.visible,
+.warning-message.visible,
+.success-message.visible {
+    display: block;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    text-align: center;
+    text-decoration: none;
+    margin-top: var(--space-md);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.015em;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 3.5rem;
+    outline: none;
+}
+
+.btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary-light);
+    box-shadow: none;
+}
+
+.btn-secondary:active:not(:disabled) {
+    background: rgba(139, 115, 85, 0.08);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success), #7A9B6C);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--error), #B36666);
+}
+
+.btn-small {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    min-height: 2.75rem;
+}
+
+/* ===== WELCOME SCREEN ===== */
+.welcome-icon-container {
+    width: 10rem;
+    height: 10rem;
+    margin: var(--space-xl) auto var(--space-lg);
+    position: relative;
+}
+
+.welcome-icon-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    border-radius: 50%;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-1rem) rotate(5deg); }
+}
+
+.welcome-icon-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8rem;
+    height: 8rem;
+    object-fit: contain;
+    border-radius: 50%;
+    background: var(--surface);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 2;
+}
+
+.welcome-description {
+    text-align: center;
+    font-size: 1.125rem;
+    color: var(--text-light);
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+    padding: 0 var(--space-md);
+}
+
+.disclaimer {
+    background: linear-gradient(135deg, rgba(255, 249, 235, 0.95), rgba(255, 243, 220, 0.95));
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin: var(--space-lg) 0;
+    font-size: 0.875rem;
+    color: var(--primary-dark);
+    border-left: 4px solid var(--warning);
+    box-shadow: var(--shadow-sm);
+}
+
+.disclaimer strong {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+/* ===== HAND SELECTION ===== */
+.hand-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.hand-option {
+    display: flex;
+    align-items: center;
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    border: 2px solid transparent;
+    outline: none;
+    min-height: 9rem;
+}
+
+.hand-option:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.hand-option:active:not(.selected) {
+    transform: scale(0.99);
+}
+
+.hand-option.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.05), rgba(139, 115, 85, 0.1));
+    box-shadow: var(--shadow-lg);
+}
+
+.hand-icon {
+    width: 5rem;
+    height: 5rem;
+    margin-right: var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.1), rgba(255, 255, 255, 0.8));
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.hand-icon-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-full);
+}
+
+.hand-info h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    color: var(--primary-dark);
+}
+
+.hand-info p {
+    color: var(--text-light);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+    .hand-option {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-md);
+        min-height: auto;
+    }
+    
+    .hand-icon {
+        margin-right: 0;
+        margin-bottom: var(--space-md);
+        width: 4rem;
+        height: 4rem;
+    }
+    
+    .hand-info h3 {
+        font-size: 1.125rem;
+    }
+}
+
+/* ===== PALM CAPTURE ===== */
+.capture-instructions {
+    background: linear-gradient(135deg, rgba(168, 153, 133, 0.08), rgba(232, 226, 217, 0.12));
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    border: 1px solid rgba(168, 153, 133, 0.1);
+}
+
+.capture-instructions h3 {
+    color: var(--primary-dark);
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.capture-instructions h3 span {
+    margin-right: var(--space-sm);
+    font-size: 1.25rem;
+}
+
+.capture-instructions ul {
+    padding-left: var(--space-lg);
+    margin-top: var(--space-sm);
+}
+
+.capture-instructions li {
+    margin-bottom: var(--space-xs);
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.capture-options {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.capture-options .btn {
+    margin-top: 0;
+    flex: 1;
+}
+
+@media (max-width: 480px) {
+    .capture-options {
+        flex-direction: column;
+    }
+}
+
+.camera-container {
+    margin-top: var(--space-lg);
+    position: relative;
+    display: none;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    background: #000;
+    aspect-ratio: 4/3;
+}
+
+.camera-container.active {
+    display: block;
+    animation: fadeInScale var(--transition-normal);
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+#cameraVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1);
+}
+
+.camera-feedback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.feedback-message {
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    display: none;
+    animation: fadeIn var(--transition-fast);
+}
+
+.feedback-message.visible {
+    display: block;
+}
+
+.feedback-message.success {
+    background: rgba(138, 155, 124, 0.85);
+}
+
+.capture-btn {
+    position: absolute;
+    bottom: var(--space-lg);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    border: 3px solid var(--primary);
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-normal);
+    z-index: 10;
+    outline: none;
+}
+
+.capture-btn:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.capture-btn:active:not(:disabled) {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.capture-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.capture-btn.enabled {
+    border-color: var(--success);
+    animation: pulse 2s infinite;
+}
+
+.capture-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--primary);
+    border-radius: 50%;
+    transition: all var(--transition-normal);
+}
+
+.capture-btn.enabled::after {
+    background: var(--success);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(138, 155, 124, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 0.75rem rgba(138, 155, 124, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(138, 155, 124, 0);
+    }
+}
+
+.upload-preview {
+    margin-top: var(--space-lg);
+    display: none;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(139, 115, 85, 0.1);
+    background: linear-gradient(135deg, var(--surface-light), rgba(139, 115, 85, 0.05));
+    aspect-ratio: 4/3;
+}
+
+.upload-preview.active {
+    display: block;
+    animation: fadeInScale var(--transition-normal);
+}
+
+#uploadedImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* ===== PROCESSING SCREEN ===== */
+.processing-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    text-align: center;
+    padding: var(--space-xl);
+}
+
+.processing-animation {
+    position: relative;
+    width: 8rem;
+    height: 8rem;
+    margin-bottom: var(--space-xl);
+}
+
+.processing-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 3rem;
+    height: 3rem;
+    background: var(--primary);
+    border-radius: 50%;
+    animation: corePulse 2s ease-in-out infinite;
+}
+
+@keyframes corePulse {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+}
+
+.processing-title {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-sm);
+    text-align: center;
+}
+
+.processing-subtitle {
+    color: var(--text-light);
+    margin-bottom: var(--space-xxl);
+    max-width: 32rem;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background: rgba(139, 115, 85, 0.1);
+    border-radius: var(--radius-full);
+    margin-top: var(--space-xl);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--success));
+    width: 0%;
+    border-radius: var(--radius-full);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== RESULTS SCREEN ===== */
+.results-header {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    position: relative;
+}
+
+.results-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    width: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139, 115, 85, 0.2), transparent);
+}
+
+.results-title {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-xs);
+}
+
+.results-subtitle {
+    color: var(--text-light);
+    font-size: 1rem;
+}
+
+.palm-type-section {
+    text-align: center;
+    padding: var(--space-xl);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: var(--radius-md);
+    color: white;
+    margin-bottom: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.palm-type-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-md);
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    animation: float 4s ease-in-out infinite;
+}
+
+.palm-type-name {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    margin-bottom: var(--space-sm);
+    font-weight: 700;
+    position: relative;
+    z-index: 2;
+}
+
+.palm-type-desc {
+    font-size: 1.125rem;
+    opacity: 0.95;
+    line-height: 1.6;
+    position: relative;
+    z-index: 2;
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+.results-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.result-item {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border-left: 4px solid var(--primary);
+    transition: all var(--transition-normal);
+}
+
+.result-item:active {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.result-item-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.result-item-icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-right: var(--space-md);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 115, 85, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.result-item-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.result-item-content {
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.result-item-content p {
+    margin-bottom: var(--space-sm);
+}
+
+.result-item-content p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+    .result-item-content {
+        padding-left: 0;
+        margin-top: var(--space-md);
+    }
+    
+    .result-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+    
+    .result-item-icon {
+        margin-right: 0;
+    }
+}
+
+.personal-tip {
+    background: linear-gradient(135deg, rgba(232, 226, 217, 0.95), rgba(240, 234, 224, 0.95));
+    padding: var(--space-xl);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-xl);
+    text-align: center;
+    border-left: 4px solid var(--accent);
+    box-shadow: var(--shadow-md);
+}
+
+.personal-tip-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-md);
+}
+
+.personal-tip-icon {
+    font-size: 1.5rem;
+    margin-right: var(--space-sm);
+    color: var(--accent);
+}
+
+.personal-tip-title {
+    color: var(--primary-dark);
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: var(--font-heading);
+}
+
+.personal-tip-content {
+    font-size: 1.125rem;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.6;
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+/* ===== HISTORY SCREEN ===== */
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid rgba(139, 115, 85, 0.1);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.history-title {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+.history-count {
+    background: var(--primary);
+    color: white;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    font-size: 0.875rem;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.history-controls {
+    display: flex;
+    gap: var(--space-sm);
+    width: 100%;
+    margin-top: var(--space-sm);
+}
+
+@media (min-width: 480px) {
+    .history-controls {
+        width: auto;
+        margin-top: 0;
+    }
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+.history-item {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    outline: none;
+    transition: all var(--transition-normal);
+}
+
+.history-item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.history-item:active {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.history-item-content {
+    cursor: pointer;
+}
+
+.history-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.history-item-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.history-item-date {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.history-item-type {
+    display: inline-block;
+    background: rgba(139, 115, 85, 0.1);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: var(--space-sm);
+}
+
+.history-item-description {
+    color: var(--text);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: var(--space-sm);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.history-item-preview {
+    width: 100%;
+    height: 6rem;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: var(--space-sm);
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.1), rgba(255, 255, 255, 0.8));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.history-item-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.history-item-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(139, 115, 85, 0.1);
+}
+
+.empty-history {
+    text-align: center;
+    padding: var(--space-xxl) var(--space-lg);
+    color: var(--text-light);
+}
+
+.empty-history-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-lg);
+    opacity: 0.5;
+}
+
+.empty-history-text {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+}
+
+/* ===== NAVIGATION ===== */
+.nav-buttons {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: auto;
+    padding-top: var(--space-lg);
+    border-top: 1px solid rgba(139, 115, 85, 0.1);
+}
+
+.nav-buttons .btn {
+    margin-top: 0;
+}
+
+.results-actions {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+}
+
+@media (max-width: 480px) {
+    .results-actions {
+        flex-direction: column;
+    }
+}
+
+/* ===== FOOTER ===== */
+.app-footer {
+    text-align: center;
+    padding: var(--space-lg);
+    color: var(--text-lighter);
+    font-size: 0.875rem;
+    border-top: 1px solid rgba(139, 115, 85, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* ===== SCROLL TO TOP ===== */
+.scroll-to-top {
+    position: fixed;
+    bottom: calc(1.25rem + var(--safe-bottom));
+    right: calc(1.25rem + var(--safe-right));
+    width: 3rem;
+    height: 3rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+    opacity: 0;
+    visibility: hidden;
+    border: none;
+    outline: none;
+    font-size: 1.25rem;
+}
+
+.scroll-to-top:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.scroll-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.scroll-to-top:active {
+    transform: scale(0.95);
+    background: var(--primary-dark);
+}
+
+/* ===== DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #A89176;
+        --primary-light: #C8B9A5;
+        --primary-dark: #8A7C6A;
+        --surface: #2C2A26;
+        --surface-light: #1A1917;
+        --surface-dark: #12110F;
+        --accent: #B8A998;
+        --success: #9AAB8C;
+        --warning: #E4B678;
+        --error: #D98A8A;
+        --text: #E8E4DC;
+        --text-light: #B8B4AC;
+        --text-lighter: #888680;
+    }
+    
+    body {
+        background: linear-gradient(135deg, #1A1917 0%, #242220 100%);
+    }
+    
+    .app-container {
+        background: var(--surface);
+    }
+    
+    .app-footer {
+        background: rgba(44, 42, 38, 0.95);
+    }
+    
+    .disclaimer {
+        background: linear-gradient(135deg, rgba(44, 40, 32, 0.95), rgba(36, 32, 28, 0.95));
+    }
+    
+    .capture-instructions {
+        background: linear-gradient(135deg, rgba(40, 36, 32, 0.8), rgba(36, 32, 28, 0.9));
+    }
+    
+    .personal-tip {
+        background: linear-gradient(135deg, rgba(44, 40, 36, 0.95), rgba(40, 36, 32, 0.95));
+    }
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .app-loader,
+    .camera-container,
+    .capture-btn,
+    .capture-options,
+    .nav-buttons,
+    .scroll-to-top,
+    .app-footer,
+    .history-item-actions {
+        display: none !important;
+    }
+    
+    .app-container {
+        box-shadow: none;
+        max-width: 100%;
+        margin: 0;
+    }
+    
+    body {
+        background: white !important;
+    }
+    
+    .screen.active {
+        display: block;
+        opacity: 1;
+        animation: none;
+    }
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+@media (max-width: 480px) {
+    .screen {
+        padding: var(--space-md);
+    }
+    
+    .header {
+        margin-bottom: var(--space-lg);
+    }
+    
+    .btn {
+        padding: 0.875rem 1.25rem;
+        font-size: 0.9375rem;
+        min-height: 3.25rem;
+    }
+    
+    .processing-title {
+        font-size: 1.5rem;
+    }
+    
+    .processing-subtitle {
+        font-size: 1rem;
+        max-width: 100%;
+    }
+    
+    .history-item {
+        padding: var(--space-md);
+    }
+    
+    .history-item-actions {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+<body>
+    <!-- App Loader -->
+    <div class="app-loader" id="appLoader" aria-live="polite" aria-label="Loading application">
+        <div class="loader-logo">PalmSense</div>
+        <div class="loader-spinner" aria-hidden="true"></div>
+        <div class="loader-text">Initializing</div>
+    </div>
+    
+    <!-- Main App Container -->
+    <div class="app-container" id="appContainer">
+        <!-- Welcome Screen -->
+        <div class="screen active" id="welcomeScreen" role="region" aria-label="Welcome screen">
+            <div class="header">
+                <div class="header-with-logo">
+                    <img src="logo.png" alt="PalmSense Logo" class="header-logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<h1 class=&quot;app-title&quot;>PalmSense</h1>'">
+                    <h1 class="app-title">PalmSense</h1>
+                </div>
+                <p class="app-subtitle">Discover your inner self through the ancient wisdom of palmistry</p>
+            </div>
+            
+            <div class="content">
+                <div class="content-scrollable">
+                    <div class="error-message" id="welcomeError"></div>
+                    
+                    <div class="welcome-icon-container">
+                        <div class="welcome-icon-bg" aria-hidden="true"></div>
+                        <img src="home_page.png" alt="Palm Analysis" class="welcome-icon-image">
+                    </div>
+                    
+                    <div class="welcome-description">
+                        Welcome to PalmSense, where ancient wisdom meets modern insight. Our advanced analysis combines traditional palmistry with contemporary psychology to reveal your unique personality traits, strengths, and life path.
+                    </div>
+                    
+                    <div class="disclaimer">
+                        <strong>Important Notice:</strong> This app is designed for self-reflection and entertainment purposes only. It does not provide medical, psychological, or fortune-telling advice. All insights are generated based on general personality patterns and should be considered as guidance for personal growth.
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="btn" id="startBtn" aria-label="Begin your palm analysis journey">
+                        Begin Your Journey
+                    </button>
+                    <button class="btn btn-secondary" id="viewHistoryBtn" aria-label="View your analysis history">
+                        View History
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hand Selection Screen -->
+        <div class="screen" id="handSelectionScreen" role="region" aria-label="Hand selection screen">
+            <div class="header">
+                <h1 class="app-title">Choose Your Hand</h1>
+                <p class="app-subtitle">Select which palm to analyze for personalized insights</p>
+            </div>
+            
+            <div class="content">
+                <div class="content-scrollable">
+                    <div class="error-message" id="handSelectionError"></div>
+                    
+                    <div class="hand-options">
+                        <div class="hand-option" data-hand="left" role="button" tabindex="0" aria-label="Select left hand for analysis">
+                            <div class="hand-icon">
+                                <img src="left-hand.jpg" alt="Left Hand" class="hand-icon-image" onerror="this.parentElement.innerHTML='<div class=&quot;image-fallback&quot;>🖐️</div>'">
+                            </div>
+                            <div class="hand-info">
+                                <h3>Left Hand</h3>
+                                <p>Represents your innate qualities, subconscious mind, and inherited traits—the foundation of your personality.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="hand-option" data-hand="right" role="button" tabindex="0" aria-label="Select right hand for analysis">
+                            <div class="hand-icon">
+                                <img src="right-hand.jpg" alt="Right Hand" class="hand-icon-image" onerror="this.parentElement.innerHTML='<div class=&quot;image-fallback&quot;>🤚</div>'">
+                            </div>
+                            <div class="hand-info">
+                                <h3>Right Hand</h3>
+                                <p>Reflects your developed characteristics, conscious choices, and life experiences—who you're becoming.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" id="backToWelcomeBtn" aria-label="Go back to welcome screen">Back</button>
+                    <button class="btn" id="confirmHandBtn" disabled aria-label="Continue with selected hand">Continue</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Palm Capture Screen -->
+        <div class="screen" id="captureScreen" role="region" aria-label="Palm capture screen">
+            <div class="header">
+                <h1 class="app-title">Capture Your Palm</h1>
+                <p class="app-subtitle">Take a clear photo or upload an image for accurate analysis</p>
+            </div>
+            
+            <div class="content">
+                <div class="content-scrollable">
+                    <div class="error-message" id="captureError"></div>
+                    <div class="warning-message" id="cameraWarning"></div>
+                    <div class="success-message" id="cameraSuccess"></div>
+                    
+                    <div class="capture-instructions">
+                        <h3><span aria-hidden="true">📸</span> For Best Results</h3>
+                        <ul>
+                            <li>Place your hand flat on a contrasting surface</li>
+                            <li>Ensure even, natural lighting (avoid shadows)</li>
+                            <li>Keep fingers slightly apart for clear line visibility</li>
+                            <li>Position camera directly above your palm</li>
+                            <li>Show your entire palm clearly in the camera view</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="capture-options">
+                        <button class="btn" id="openCameraBtn" aria-label="Open camera to take photo">Open Camera</button>
+                        <button class="btn btn-secondary" id="uploadImageBtn" aria-label="Upload an existing image">Upload Image</button>
+                    </div>
+                    
+                    <div class="camera-container" id="cameraContainer">
+                        <video id="cameraVideo" autoplay playsinline aria-label="Camera preview"></video>
+                        <div class="camera-feedback" id="cameraFeedback">
+                            <div class="feedback-message" id="handStatusMessage">Show your palm to the camera</div>
+                        </div>
+                        <button class="capture-btn" id="capturePhotoBtn" disabled aria-label="Capture photo when palm is detected"></button>
+                    </div>
+                    
+                    <div class="upload-preview" id="uploadPreview">
+                        <img id="uploadedImage" src="" alt="Uploaded palm image">
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" id="backToHandBtn" aria-label="Go back to hand selection">Back</button>
+                    <button class="btn" id="processPalmBtn" disabled aria-label="Analyze the captured palm image">Analyze My Palm</button>
+                </div>
+                
+                <input type="file" id="imageUpload" accept="image/*" capture="environment" class="hidden" aria-label="Upload palm image">
+            </div>
+        </div>
+        
+        <!-- Processing Screen -->
+        <div class="screen" id="processingScreen" role="region" aria-label="Processing screen" aria-live="polite">
+            <div class="processing-container">
+                <div class="error-message" id="processingError"></div>
+                
+                <div class="processing-animation" aria-hidden="true">
+                    <div class="processing-core"></div>
+                    <div class="processing-orbits">
+                        <div class="processing-orbit"></div>
+                        <div class="processing-orbit"></div>
+                        <div class="processing-orbit"></div>
+                    </div>
+                </div>
+                <h2 class="processing-title">Reading Your Palm</h2>
+                <p class="processing-subtitle">Our advanced system is analyzing the unique patterns, lines, and contours of your palm to generate personalized insights.</p>
+                
+                <div class="processing-steps">
+                    <div class="processing-step active" id="step1">
+                        <div class="step-icon">1</div>
+                        <div class="step-text">Scanning palm contours and shape</div>
+                    </div>
+                    
+                    <div class="processing-step" id="step2">
+                        <div class="step-icon">2</div>
+                        <div class="step-text">Analyzing primary and secondary lines</div>
+                    </div>
+                    
+                    <div class="processing-step" id="step3">
+                        <div class="step-icon">3</div>
+                        <div class="step-text">Interpreting patterns and markings</div>
+                    </div>
+                    
+                    <div class="processing-step" id="step4">
+                        <div class="step-icon">4</div>
+                        <div class="step-text">Compiling your personalized report</div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Screen -->
+        <div class="screen" id="resultsScreen" role="region" aria-label="Results screen">
+            <div class="header">
+                <h1 class="app-title">Your Palm Reading</h1>
+                <p class="app-subtitle">Personalized insights based on your unique palm patterns</p>
+            </div>
+            
+            <div class="content">
+                <div class="content-scrollable">
+                    <div class="error-message" id="resultsError"></div>
+                    
+                    <div class="results-header">
+                        <h2 class="results-title" id="userHandTitle">Left Hand Analysis</h2>
+                        <p class="results-subtitle">Generated for you on <span id="resultDate">Today</span></p>
+                    </div>
+                    
+                    <!-- Palm Type Section -->
+                    <div class="palm-type-section">
+                        <div class="palm-type-icon" id="palmTypeIcon" aria-hidden="true">🌿</div>
+                        <h3 class="palm-type-name" id="palmTypeName">The Explorer</h3>
+                        <p class="palm-type-desc" id="palmTypeDesc">You possess a curious nature and highly adaptable approach to life's journey.</p>
+                    </div>
+                    
+                    <!-- Results Content Area -->
+                    <div class="results-content">
+                        
+                        <!-- Lines Analysis Section -->
+                        <div class="result-item">
+                            <div class="result-item-header">
+                                <div class="result-item-icon" aria-hidden="true">📊</div>
+                                <div class="result-item-title">Lines Analysis</div>
+                            </div>
+                            <div class="result-item-content" id="linesContent">
+                                <p><strong>❤️ Heart Line:</strong> <span id="heartLineText">Your emotional approach shows warmth, empathy, and balanced expression in relationships.</span></p>
+                                <p><strong>🧠 Head Line:</strong> <span id="headLineText">Your cognitive patterns reveal a blend of intuitive insight and practical problem-solving abilities.</span></p>
+                                <p><strong>🌱 Life Line:</strong> <span id="lifeLineText">Your life energy indicates resilience, adaptability, and continuous personal growth throughout your journey.</span></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Life Guidance Section -->
+                        <div class="result-item">
+                            <div class="result-item-header">
+                                <div class="result-item-icon" aria-hidden="true">🧭</div>
+                                <div class="result-item-title">Life Guidance</div>
+                            </div>
+                            <div class="result-item-content" id="guidanceContent">
+                                <p><strong>Career Approach:</strong> <span id="careerText">You thrive in dynamic environments that challenge your creativity and allow independent thinking.</span></p>
+                                <p><strong>Emotional Balance:</strong> <span id="emotionalText">Your emotional intelligence serves as a compass, guiding relationships with genuine empathy and understanding.</span></p>
+                                <p><strong>Focus & Discipline:</strong> <span id="focusText">When passionate about a subject, you demonstrate remarkable concentration and dedication to mastery.</span></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Personality Traits Section -->
+                        <div class="result-item">
+                            <div class="result-item-header">
+                                <div class="result-item-icon" aria-hidden="true">✨</div>
+                                <div class="result-item-title">Core Personality Traits</div>
+                            </div>
+                            <div class="result-item-content" id="traitsContent">
+                                <p>Your palm reveals a personality characterized by adaptability, intellectual curiosity, and emotional depth. You navigate life with a balanced perspective, harmonizing practical considerations with creative inspiration.</p>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Personal Tip -->
+                    <div class="personal-tip">
+                        <div class="personal-tip-header">
+                            <div class="personal-tip-icon" aria-hidden="true">💡</div>
+                            <div class="personal-tip-title">Personal Insight</div>
+                        </div>
+                        <div class="personal-tip-content" id="personalTip">
+                            Your intuitive wisdom often recognizes the right path before logic confirms it—trust this inner guidance during important decisions.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results-actions">
+                    <button class="btn btn-secondary" id="newScanBtn" aria-label="Start a new palm analysis">New Analysis</button>
+                    <button class="btn" id="saveResultBtn" aria-label="Save this reading to history">Save This Reading</button>
+                    <button class="btn btn-secondary" id="viewHistoryFromResultsBtn" aria-label="View analysis history">View History</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Screen -->
+        <div class="screen" id="historyScreen" role="region" aria-label="History screen">
+            <div class="header">
+                <h1 class="app-title">Reading History</h1>
+                <p class="app-subtitle">Review your past palm analysis results</p>
+            </div>
+            
+            <div class="content">
+                <div class="content-scrollable">
+                    <div class="error-message" id="historyError"></div>
+                    
+                    <div class="history-header">
+                        <div class="history-title">Saved Readings</div>
+                        <div class="history-count" id="historyCount">0</div>
+                        <div class="history-controls">
+                            <button class="btn btn-secondary btn-small" id="clearHistoryBtn" aria-label="Clear all history">Clear All</button>
+                        </div>
+                    </div>
+                    
+                    <div class="history-list" id="historyList">
+                        <!-- History items will be dynamically inserted here -->
+                    </div>
+                    
+                    <div class="empty-history" id="emptyHistory">
+                        <div class="empty-history-icon" aria-hidden="true">📖</div>
+                        <div class="empty-history-text">No saved readings yet. Complete your first palm analysis to see results here!</div>
+                        <button class="btn" id="startFromHistoryBtn" aria-label="Start new palm analysis">Start New Analysis</button>
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" id="backFromHistoryBtn" aria-label="Go back to home screen">Back to Home</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="app-footer">
+            PalmSense © 2025 | Ancient Wisdom, Modern Insight | For self-reflection only
+        </div>
+        
+        <!-- Scroll to Top Button -->
+        <button class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">↑</button>
+    </div>
+
+    <script>
+        // ===== SIMPLIFIED MEDIAPIPE HANDS INTEGRATION =====
+        class SimpleHandDetector {
+            constructor() {
+                this.hands = null;
+                this.camera = null;
+                this.isRunning = false;
+                this.handDetected = false;
+                this.detectionCount = 0;
+                this.requiredDetections = 5; // Require 5 consecutive detections for stability
+                
+                this.initializeHands();
+            }
+            
+            async initializeHands() {
+                try {
+                    this.hands = new Hands({
+                        locateFile: (file) => {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                        }
+                    });
+                    
+                    this.hands.setOptions({
+                        maxNumHands: 1,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.7, // Higher confidence for palm detection
+                        minTrackingConfidence: 0.7
+                    });
+                    
+                    this.hands.onResults((results) => {
+                        this.processResults(results);
+                    });
+                    
+                    console.log('MediaPipe Hands initialized');
+                } catch (error) {
+                    console.error('Error initializing MediaPipe:', error);
+                    ErrorHandler.showError('captureError', 'Failed to initialize hand detection. Please refresh the page.');
+                }
+            }
+            
+            async startDetection(videoElement) {
+                if (!this.hands || this.isRunning) return;
+                
+                try {
+                    // Wait for video metadata to be ready
+                    await new Promise((resolve) => {
+                        if (videoElement.readyState >= 2) {
+                            resolve();
+                        } else {
+                            videoElement.onloadedmetadata = resolve;
+                        }
+                    });
+                    
+                    this.camera = new Camera(videoElement, {
+                        onFrame: async () => {
+                            if (this.hands && this.isRunning && videoElement.videoWidth > 0) {
+                                await this.hands.send({ image: videoElement });
+                            }
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    
+                    await this.camera.start();
+                    this.isRunning = true;
+                    console.log('Hand detection started');
+                } catch (error) {
+                    console.error('Error starting camera:', error);
+                    ErrorHandler.showError('captureError', 'Failed to start hand detection camera.');
+                }
+            }
+            
+            stopDetection() {
+                if (this.camera) {
+                    this.camera.stop();
+                    this.camera = null;
+                }
+                this.isRunning = false;
+                this.handDetected = false;
+                this.detectionCount = 0;
+            }
+            
+            processResults(results) {
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    // No hand detected
+                    this.detectionCount = Math.max(0, this.detectionCount - 1);
+                    this.updateHandStatus(false);
+                    return;
+                }
+                
+                // Get first hand only
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // Check if palm is facing camera (using landmark positions)
+                // For palm detection, we want the palm facing the camera
+                const wrist = landmarks[0];
+                const middleMCP = landmarks[9];
+                const indexTip = landmarks[8];
+                const pinkyTip = landmarks[20];
+                
+                // Calculate if palm is relatively flat and facing camera
+                // Simple check: wrist should be lower than fingers in camera view
+                const isPalmFacing = wrist.y > middleMCP.y;
+                
+                // Check if hand is open (fingers extended)
+                const fingerSpread = Math.abs(indexTip.x - pinkyTip.x);
+                const isHandOpen = fingerSpread > 0.1; // Threshold for open hand
+                
+                if (isPalmFacing && isHandOpen) {
+                    this.detectionCount = Math.min(this.requiredDetections, this.detectionCount + 1);
+                } else {
+                    this.detectionCount = Math.max(0, this.detectionCount - 1);
+                }
+                
+                // Only consider hand detected if we have consistent detections
+                const wasDetected = this.handDetected;
+                this.handDetected = this.detectionCount >= this.requiredDetections;
+                
+                // Update status if changed
+                if (wasDetected !== this.handDetected) {
+                    this.updateHandStatus(this.handDetected);
+                }
+            }
+            
+            updateHandStatus(isDetected) {
+                const captureBtn = document.getElementById('capturePhotoBtn');
+                const statusMessage = document.getElementById('handStatusMessage');
+                
+                if (isDetected) {
+                    // Enable capture button
+                    captureBtn.disabled = false;
+                    captureBtn.classList.add('enabled');
+                    
+                    // Update status message
+                    if (statusMessage) {
+                        statusMessage.textContent = '✓ Palm detected! Ready to capture';
+                        statusMessage.className = 'feedback-message success visible';
+                    }
+                    
+                    // Show success message briefly
+                    ErrorHandler.showSuccess('cameraSuccess', 'Palm detected! You can now capture the photo.');
+                } else {
+                    // Disable capture button
+                    captureBtn.disabled = true;
+                    captureBtn.classList.remove('enabled');
+                    
+                    // Update status message
+                    if (statusMessage) {
+                        if (this.detectionCount > 0) {
+                            statusMessage.textContent = 'Keep your palm steady...';
+                            statusMessage.className = 'feedback-message info visible';
+                        } else {
+                            statusMessage.textContent = 'Show your palm to the camera';
+                            statusMessage.className = 'feedback-message visible';
+                        }
+                    }
+                }
+            }
+            
+            isHandDetected() {
+                return this.handDetected;
+            }
+        }
+
+        // ===== ENHANCED ERROR HANDLING =====
+        const ErrorHandler = {
+            showError: (elementId, message) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = message;
+                    element.classList.add('visible');
+                    setTimeout(() => {
+                        element.classList.remove('visible');
+                    }, 5000);
+                }
+            },
+            
+            showWarning: (elementId, message) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = message;
+                    element.classList.add('visible');
+                    setTimeout(() => {
+                        element.classList.remove('visible');
+                    }, 3000);
+                }
+            },
+            
+            showSuccess: (elementId, message) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = message;
+                    element.classList.add('visible');
+                    setTimeout(() => {
+                        element.classList.remove('visible');
+                    }, 3000);
+                }
+            },
+            
+            handleCriticalError: (error) => {
+                console.error('Critical error:', error);
+                alert(`An error occurred: ${error.message}. Please refresh the page.`);
+            }
+        };
+
+        // ===== APP STATE MANAGEMENT =====
+        const appState = {
+            currentScreen: 'welcome',
+            selectedHand: null,
+            palmImage: null,
+            resultData: null,
+            scanHistory: [],
+            cameraStream: null,
+            processingInterval: null,
+            isProcessing: false,
+            isLoading: false,
+            hasCapturedImage: false,
+            handDetector: null
+        };
+
+        // ===== ENHANCED DATA FOR ANALYSIS =====
+        const palmData = {
+            palmTypes: [
+                {
+                    name: "The Explorer",
+                    icon: "🌿",
+                    description: "You possess a curious nature and highly adaptable approach to life's journey. Your palm suggests a personality that thrives on discovery, learning, and embracing new experiences with open-minded enthusiasm.",
+                    traits: ["Adaptable", "Curious", "Open-minded", "Adventurous", "Flexible"],
+                    traitsDescription: "Your palm reveals a personality characterized by adaptability, intellectual curiosity, and emotional depth. You navigate life with a balanced perspective, harmonizing practical considerations with creative inspiration."
+                },
+                {
+                    name: "The Builder",
+                    icon: "🏗️",
+                    description: "Your palm shows patterns of determination, practical intelligence, and methodical progress. You approach goals with structured planning and reliable execution.",
+                    traits: ["Determined", "Practical", "Reliable", "Organized", "Persistent"],
+                    traitsDescription: "Your analysis reveals a grounded and determined personality. You approach challenges with systematic solutions and maintain steady progress toward your objectives through consistent effort."
+                },
+                {
+                    name: "The Connector",
+                    icon: "🤝",
+                    description: "You possess exceptional interpersonal awareness and empathetic understanding. Your palm indicates natural abilities in communication, relationship-building, and emotional intelligence.",
+                    traits: ["Empathetic", "Communicative", "Diplomatic", "Social", "Understanding"],
+                    traitsDescription: "Your palm patterns suggest exceptional interpersonal skills and emotional intelligence. You naturally foster connections, understand diverse perspectives, and create harmonious relationships through genuine empathy."
+                },
+                {
+                    name: "The Visionary",
+                    icon: "🔭",
+                    description: "Your palm reveals creative thinking, innovative perspective, and big-picture vision. You have a unique ability to see possibilities and patterns that others might overlook.",
+                    traits: ["Creative", "Visionary", "Innovative", "Imaginative", "Forward-thinking"],
+                    traitsDescription: "Your analysis indicates strong creative and visionary capabilities. You excel at conceptual thinking, generating innovative solutions, and inspiring others with your forward-looking perspective."
+                },
+                {
+                    name: "The Guardian",
+                    icon: "🛡️",
+                    description: "You show patterns of stability, loyalty, and protective care. Your approach to life is grounded, responsible, and focused on creating security for yourself and others.",
+                    traits: ["Loyal", "Stable", "Protective", "Responsible", "Dependable"],
+                    traitsDescription: "Your palm analysis reveals a stable and reliable personality. You approach responsibilities with dedication, create secure environments, and build trust through consistent, dependable actions."
+                }
+            ],
+            
+            lineMeanings: {
+                heartLine: [
+                    "Your emotional approach shows warmth, empathy, and balanced expression in relationships. You value authentic connections and approach love with both passion and practical consideration.",
+                    "Your heart line indicates emotional intelligence that allows you to navigate relationships with sensitivity and understanding. You balance emotional expression with thoughtful consideration of others' feelings.",
+                    "You possess a compassionate nature that genuinely understands and responds to others' emotions. Your relationships are built on mutual respect, trust, and authentic emotional connection.",
+                    "Your emotional expression shows resilience and the ability to maintain positivity through challenges. You process feelings in healthy ways and bring emotional balance to your relationships."
+                ],
+                headLine: [
+                    "Your cognitive patterns reveal a blend of intuitive insight and practical problem-solving abilities. Your thinking integrates creativity with logical analysis for well-rounded decision-making.",
+                    "Your thought processes demonstrate clarity, focus, and intellectual curiosity. You concentrate deeply on subjects that capture your interest while maintaining mental flexibility.",
+                    "You possess an inquisitive mind that enjoys exploring new concepts and acquiring knowledge. Your thinking adapts to different situations, allowing you to understand complex ideas from multiple perspectives.",
+                    "Your head line suggests practical intelligence and systematic problem-solving. You approach challenges with strategic thinking, breaking down complexities into manageable steps toward solutions."
+                ],
+                lifeLine: [
+                    "Your life energy indicates resilience, adaptability, and continuous personal growth throughout your journey. You view challenges as opportunities for development and learning.",
+                    "You possess strong vitality and enthusiastic engagement with life experiences. Your positive energy attracts opportunities and helps you approach new situations with curiosity and optimism.",
+                    "Your life approach shows balance between different aspects of your existence. You understand the importance of harmony between personal growth, relationships, and meaningful work.",
+                    "You demonstrate inner strength that helps you navigate life's challenges with grace. Your journey reflects continuous evolution, learning from experiences, and personal transformation."
+                ]
+            },
+            
+            guidanceMessages: {
+                career: [
+                    "You thrive in dynamic environments that challenge your creativity and allow independent thinking. Consider roles where you can innovate, explore new approaches, and express your unique perspective.",
+                    "Your methodical approach serves you well in structured yet evolving environments. You excel when you can see tangible progress, contribute to meaningful projects, and work toward clear objectives.",
+                    "Your interpersonal skills make you effective in collaborative and leadership roles. You thrive when building teams, fostering relationships, and creating environments where people feel valued and understood.",
+                    "Consider paths that leverage your visionary thinking and ability to see patterns. You excel in strategic roles where you can identify opportunities, develop innovative solutions, and inspire others with your perspective.",
+                    "Your reliable nature is valued in positions requiring consistency and trustworthiness. You build confidence through dependable performance and excel in roles where stability and responsibility are essential."
+                ],
+                emotional: [
+                    "Your emotional intelligence serves as a compass, guiding relationships with genuine empathy and understanding. Continue nurturing connections while maintaining healthy personal boundaries.",
+                    "You maintain emotional equilibrium even in challenging situations, providing stability for yourself and others. This balanced approach helps create harmonious environments and resilient relationships.",
+                    "Your ability to understand diverse perspectives fosters authentic connections and harmonious relationships. Your empathy builds trust and facilitates genuine communication in both personal and professional contexts.",
+                    "You process emotions in healthy, constructive ways that promote personal growth. This emotional maturity enhances your relationships and helps you navigate life's complexities with wisdom and resilience.",
+                    "Your protective instincts extend to emotional safety for yourself and loved ones. You create spaces where people feel secure to express themselves authentically, fostering trust and genuine connection."
+                ],
+                focus: [
+                    "When passionate about a subject, you demonstrate remarkable concentration and dedication to mastery. Follow your intellectual curiosity into new areas of learning and development.",
+                    "Your disciplined approach enables you to see projects through to completion with quality and attention to detail. This persistence is foundational to achieving meaningful, long-term objectives.",
+                    "You balance focused attention with adaptive flexibility, adjusting your approach as needed while maintaining direction. This adaptive focus serves you well in dynamic, evolving situations.",
+                    "Your visionary thinking is complemented by the ability to concentrate on essential details. This combination enables you to transform abstract ideas into practical, achievable realities.",
+                    "You maintain consistent effort toward your goals, building momentum through steady progress. Your focused dedication leads to sustainable achievement and meaningful personal development."
+                ]
+            },
+            
+            personalTips: [
+                "Your intuitive wisdom often recognizes the right path before logic confirms it—trust this inner guidance during important decisions.",
+                "Remember to balance achievement with restoration—sustainable success emerges from harmony between focused effort and meaningful recovery.",
+                "Your adaptability is among your greatest strengths—embrace change as opportunity for growth rather than disruption to be resisted.",
+                "Nurture the relationships that matter most—they provide essential support, joy, and perspective throughout your life's journey.",
+                "Allow space for creative exploration—it can yield unexpected insights and satisfaction beyond practical accomplishments.",
+                "Practice gratitude for small moments—it cultivates a positive perspective that enhances all areas of your life experience.",
+                "Your unique perspective holds value—share your ideas confidently, as they may illuminate angles others haven't considered.",
+                "Balance planning with spontaneity—some of life's richest experiences and opportunities arise from unexpected directions.",
+                "Listen to your body's signals for rest—thoughtful self-care enhances all life domains and prevents depletion before it occurs.",
+                "Celebrate progress alongside achievements—meaningful growth unfolds through small steps that collectively create transformation."
+            ]
+        };
+
+        // ===== ENHANCED STORAGE MANAGEMENT =====
+        const StorageManager = {
+            getHistory: () => {
+                try {
+                    const history = localStorage.getItem('palmSenseHistory');
+                    return history ? JSON.parse(history) : [];
+                } catch (error) {
+                    ErrorHandler.showWarning('historyError', 'Could not load history. Using session storage.');
+                    try {
+                        const sessionHistory = sessionStorage.getItem('palmSenseHistory');
+                        return sessionHistory ? JSON.parse(sessionHistory) : [];
+                    } catch (e) {
+                        return [];
+                    }
+                }
+            },
+            
+            saveHistory: (history) => {
+                try {
+                    localStorage.setItem('palmSenseHistory', JSON.stringify(history));
+                    return true;
+                } catch (error) {
+                    ErrorHandler.showWarning('historyError', 'Could not save to localStorage. Using session storage.');
+                    try {
+                        sessionStorage.setItem('palmSenseHistory', JSON.stringify(history));
+                        return true;
+                    } catch (e) {
+                        ErrorHandler.showError('historyError', 'Could not save history. Storage may be full.');
+                        return false;
+                    }
+                }
+            },
+            
+            clearHistory: () => {
+                try {
+                    localStorage.removeItem('palmSenseHistory');
+                    sessionStorage.removeItem('palmSenseHistory');
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+        };
+
+        // ===== ENHANCED RANDOM GENERATOR =====
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed || Date.now();
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+            
+            nextInt(max) {
+                return Math.floor(this.next() * max);
+            }
+            
+            nextFloat(min, max) {
+                return min + this.next() * (max - min);
+            }
+            
+            pick(array) {
+                if (!array || array.length === 0) return null;
+                return array[this.nextInt(array.length)];
+            }
+        }
+
+        // ===== DOM ELEMENTS =====
+        const screens = {
+            welcome: document.getElementById('welcomeScreen'),
+            handSelection: document.getElementById('handSelectionScreen'),
+            capture: document.getElementById('captureScreen'),
+            processing: document.getElementById('processingScreen'),
+            results: document.getElementById('resultsScreen'),
+            history: document.getElementById('historyScreen')
+        };
+
+        const buttons = {
+            startBtn: document.getElementById('startBtn'),
+            viewHistoryBtn: document.getElementById('viewHistoryBtn'),
+            backToWelcomeBtn: document.getElementById('backToWelcomeBtn'),
+            confirmHandBtn: document.getElementById('confirmHandBtn'),
+            backToHandBtn: document.getElementById('backToHandBtn'),
+            openCameraBtn: document.getElementById('openCameraBtn'),
+            uploadImageBtn: document.getElementById('uploadImageBtn'),
+            capturePhotoBtn: document.getElementById('capturePhotoBtn'),
+            processPalmBtn: document.getElementById('processPalmBtn'),
+            newScanBtn: document.getElementById('newScanBtn'),
+            saveResultBtn: document.getElementById('saveResultBtn'),
+            viewHistoryFromResultsBtn: document.getElementById('viewHistoryFromResultsBtn'),
+            backFromHistoryBtn: document.getElementById('backFromHistoryBtn'),
+            startFromHistoryBtn: document.getElementById('startFromHistoryBtn'),
+            clearHistoryBtn: document.getElementById('clearHistoryBtn')
+        };
+
+        // ===== SCROLL TO TOP FUNCTIONALITY =====
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        
+        function scrollToTop() {
+            const currentScreen = screens[appState.currentScreen];
+            if (currentScreen) {
+                const contentScrollable = currentScreen.querySelector('.content-scrollable');
+                if (contentScrollable) {
+                    contentScrollable.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+        
+        function toggleScrollToTopButton() {
+            const currentScreen = screens[appState.currentScreen];
+            if (currentScreen) {
+                const contentScrollable = currentScreen.querySelector('.content-scrollable');
+                if (contentScrollable && contentScrollable.scrollTop > 200) {
+                    scrollToTopBtn.classList.add('visible');
+                } else {
+                    scrollToTopBtn.classList.remove('visible');
+                }
+            }
+        }
+        
+        function setupScrollListener() {
+            const currentScreen = screens[appState.currentScreen];
+            if (currentScreen) {
+                const contentScrollable = currentScreen.querySelector('.content-scrollable');
+                if (contentScrollable) {
+                    contentScrollable.addEventListener('scroll', toggleScrollToTopButton);
+                }
+            }
+        }
+        
+        scrollToTopBtn.addEventListener('click', scrollToTop);
+        
+        // ===== IMAGE VALIDATION =====
+        const ImageValidator = {
+            validateFile: (file) => {
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                
+                if (!file) {
+                    throw new Error('No file selected');
+                }
+                
+                if (!validTypes.includes(file.type)) {
+                    throw new Error('Please upload a valid image file (JPEG, PNG, WebP, or GIF).');
+                }
+                
+                if (file.size > maxSize) {
+                    throw new Error('Image size should be less than 10MB.');
+                }
+                
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    const url = URL.createObjectURL(file);
+                    
+                    img.onload = () => {
+                        URL.revokeObjectURL(url);
+                        
+                        if (img.width < 200 || img.height < 200) {
+                            reject(new Error('Image resolution too low. Minimum 200x200 pixels required.'));
+                            return;
+                        }
+                        
+                        const aspectRatio = img.width / img.height;
+                        if (aspectRatio < 0.5 || aspectRatio > 2) {
+                            reject(new Error('Image aspect ratio should be between 0.5 and 2 for best results.'));
+                            return;
+                        }
+                        
+                        resolve({ width: img.width, height: img.height });
+                    };
+                    
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        reject(new Error('Invalid image file. Please try another image.'));
+                    };
+                    
+                    img.src = url;
+                });
+            }
+        };
+
+        // ===== CAMERA MANAGEMENT =====
+        const CameraManager = {
+            isSupported: () => {
+                return !!(navigator.mediaDevices && 
+                         navigator.mediaDevices.getUserMedia &&
+                         typeof window.MediaStream !== 'undefined');
+            },
+            
+            getCameraStream: async () => {
+                if (!CameraManager.isSupported()) {
+                    throw new Error('Camera not supported on this device/browser.');
+                }
+                
+                try {
+                    const constraints = {
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 960 }
+                        } 
+                    };
+                    
+                    return await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (error) {
+                    if (error.name === 'NotAllowedError') {
+                        throw new Error('Camera access denied. Please enable camera permissions.');
+                    } else if (error.name === 'NotFoundError') {
+                        throw new Error('No camera found on this device.');
+                    } else {
+                        throw new Error(`Camera error: ${error.message}`);
+                    }
+                }
+            },
+            
+            stopCameraStream: () => {
+                if (appState.cameraStream) {
+                    appState.cameraStream.getTracks().forEach(track => {
+                        track.stop();
+                    });
+                    appState.cameraStream = null;
+                }
+            },
+            
+            capturePhoto: (videoElement) => {
+                if (!videoElement || videoElement.videoWidth === 0) {
+                    throw new Error('Camera not ready. Please wait a moment.');
+                }
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                
+                // Mirror the image to match the video preview
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+                context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                
+                return canvas.toDataURL('image/jpeg', 0.85);
+            }
+        };
+
+        // ===== Initialize App Loader =====
+        function initializeAppLoader() {
+            const appLoader = document.getElementById('appLoader');
+            const appContainer = document.getElementById('appContainer');
+            
+            setTimeout(() => {
+                appLoader.classList.add('hidden');
+                setTimeout(() => {
+                    appContainer.classList.add('visible');
+                    initializeApp();
+                }, 100);
+            }, 1500);
+        }
+
+        // ===== Screen Navigation =====
+        function showScreen(screenName) {
+            if (appState.isLoading) return;
+            
+            if (!screens[screenName]) {
+                ErrorHandler.showError('welcomeError', `Screen ${screenName} not found.`);
+                return;
+            }
+            
+            if (appState.processingInterval) {
+                clearInterval(appState.processingInterval);
+                appState.processingInterval = null;
+            }
+            
+            if (appState.currentScreen === 'capture' && screenName !== 'capture') {
+                CameraManager.stopCameraStream();
+                if (appState.handDetector) {
+                    appState.handDetector.stopDetection();
+                }
+            }
+            
+            Object.values(screens).forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            screens[screenName].classList.add('active');
+            appState.currentScreen = screenName;
+            
+            updateScreenUI(screenName);
+            
+            setTimeout(() => {
+                setupScrollListener();
+                setTimeout(scrollToTop, 100);
+            }, 50);
+        }
+
+        // ===== Update Screen UI =====
+        function updateScreenUI(screenName) {
+            switch(screenName) {
+                case 'handSelection':
+                    document.querySelectorAll('.hand-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    buttons.confirmHandBtn.disabled = true;
+                    break;
+                    
+                case 'capture':
+                    buttons.processPalmBtn.disabled = !appState.hasCapturedImage;
+                    buttons.capturePhotoBtn.disabled = true;
+                    buttons.capturePhotoBtn.classList.remove('enabled');
+                    break;
+                    
+                case 'results':
+                    if (appState.resultData) {
+                        displayResults();
+                    }
+                    break;
+                    
+                case 'history':
+                    loadAndDisplayHistory();
+                    break;
+            }
+        }
+
+        // ===== Hand Selection Logic =====
+        function setupHandSelection() {
+            const handOptions = document.querySelectorAll('.hand-option');
+            
+            handOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    selectHandOption(this);
+                });
+                
+                option.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectHandOption(option);
+                    }
+                });
+            });
+            
+            function selectHandOption(option) {
+                handOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                appState.selectedHand = option.dataset.hand;
+                buttons.confirmHandBtn.disabled = false;
+                option.focus();
+            }
+        }
+
+        // ===== SIMPLIFIED Image Capture Logic with MediaPipe =====
+        async function openCamera() {
+            if (appState.isLoading) return;
+            
+            appState.isLoading = true;
+            const originalText = buttons.openCameraBtn.textContent;
+            buttons.openCameraBtn.textContent = 'Opening Camera...';
+            buttons.openCameraBtn.classList.add('loading');
+            
+            try {
+                CameraManager.stopCameraStream();
+                
+                if (appState.handDetector) {
+                    appState.handDetector.stopDetection();
+                }
+                
+                appState.cameraStream = await CameraManager.getCameraStream();
+                
+                const cameraContainer = document.getElementById('cameraContainer');
+                const cameraVideo = document.getElementById('cameraVideo');
+                
+                cameraContainer.classList.add('active');
+                cameraVideo.srcObject = appState.cameraStream;
+                
+                document.getElementById('uploadPreview').classList.remove('active');
+                
+                buttons.processPalmBtn.disabled = true;
+                buttons.capturePhotoBtn.disabled = true;
+                buttons.capturePhotoBtn.classList.remove('enabled');
+                
+                // Clear any previous messages
+                document.getElementById('cameraSuccess').classList.remove('visible');
+                
+                if (!CameraManager.isSupported()) {
+                    ErrorHandler.showWarning('cameraWarning', 'Camera features may be limited on this device.');
+                }
+                
+                if (!appState.handDetector) {
+                    appState.handDetector = new SimpleHandDetector();
+                }
+                
+                // Wait for video metadata to load
+                await new Promise((resolve) => {
+                    if (cameraVideo.readyState >= 2) {
+                        resolve();
+                    } else {
+                        cameraVideo.onloadedmetadata = resolve;
+                    }
+                });
+                
+                await appState.handDetector.startDetection(cameraVideo);
+                
+            } catch (error) {
+                ErrorHandler.showError('captureError', error.message);
+                buttons.processPalmBtn.disabled = true;
+                buttons.capturePhotoBtn.disabled = true;
+            } finally {
+                buttons.openCameraBtn.textContent = originalText;
+                buttons.openCameraBtn.classList.remove('loading');
+                appState.isLoading = false;
+            }
+        }
+        
+        function setupImageUpload() {
+            const uploadInput = document.getElementById('imageUpload');
+            
+            uploadInput.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    await ImageValidator.validateFile(file);
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        const uploadedImage = document.getElementById('uploadedImage');
+                        uploadedImage.src = event.target.result;
+                        
+                        document.getElementById('uploadPreview').classList.add('active');
+                        
+                        const cameraContainer = document.getElementById('cameraContainer');
+                        cameraContainer.classList.remove('active');
+                        
+                        CameraManager.stopCameraStream();
+                        if (appState.handDetector) {
+                            appState.handDetector.stopDetection();
+                        }
+                        
+                        appState.palmImage = event.target.result;
+                        appState.hasCapturedImage = true;
+                        
+                        buttons.processPalmBtn.disabled = false;
+                    };
+                    
+                    reader.onerror = function() {
+                        ErrorHandler.showError('captureError', 'Error reading the image file.');
+                    };
+                    
+                    reader.readAsDataURL(file);
+                    
+                } catch (error) {
+                    ErrorHandler.showError('captureError', error.message);
+                    this.value = '';
+                }
+            });
+            
+            buttons.uploadImageBtn.addEventListener('click', () => {
+                uploadInput.click();
+            });
+        }
+        
+        function setupCameraCapture() {
+            buttons.capturePhotoBtn.addEventListener('click', function() {
+                if (!appState.cameraStream) {
+                    ErrorHandler.showError('captureError', 'Camera is not active.');
+                    return;
+                }
+                
+                if (!appState.handDetector || !appState.handDetector.isHandDetected()) {
+                    ErrorHandler.showError('captureError', 'Please show your palm to the camera first.');
+                    return;
+                }
+                
+                try {
+                    const cameraVideo = document.getElementById('cameraVideo');
+                    const imageData = CameraManager.capturePhoto(cameraVideo);
+                    
+                    const uploadedImage = document.getElementById('uploadedImage');
+                    uploadedImage.src = imageData;
+                    
+                    document.getElementById('uploadPreview').classList.add('active');
+                    document.getElementById('cameraContainer').classList.remove('active');
+                    
+                    appState.palmImage = imageData;
+                    appState.hasCapturedImage = true;
+                    
+                    CameraManager.stopCameraStream();
+                    if (appState.handDetector) {
+                        appState.handDetector.stopDetection();
+                    }
+                    
+                    buttons.processPalmBtn.disabled = false;
+                    
+                    // Show success message
+                    ErrorHandler.showSuccess('cameraSuccess', 'Photo captured successfully! You can now analyze your palm.');
+                    
+                } catch (error) {
+                    ErrorHandler.showError('captureError', error.message);
+                }
+            });
+        }
+
+        // ===== Enhanced Palm Analysis =====
+        function analyzePalm() {
+            try {
+                const seedStr = (appState.selectedHand || 'left') + Date.now().toString();
+                let seed = 0;
+                
+                for (let i = 0; i < seedStr.length; i++) {
+                    seed = ((seed << 5) - seed) + seedStr.charCodeAt(i);
+                    seed = seed & 0xFFFFFFFF;
+                }
+                
+                const random = new SeededRandom(seed);
+                
+                if (!palmData.palmTypes || palmData.palmTypes.length === 0) {
+                    throw new Error('Palm type data not available');
+                }
+                
+                const palmType = random.pick(palmData.palmTypes);
+                
+                if (!palmType || typeof palmType !== 'object') {
+                    throw new Error('Invalid palm type data');
+                }
+                
+                const validatedPalmType = {
+                    name: palmType.name || 'The Explorer',
+                    icon: palmType.icon || '🌿',
+                    description: palmType.description || 'You possess a curious nature and adaptable approach.',
+                    traits: Array.isArray(palmType.traits) ? palmType.traits : ['Adaptable', 'Curious'],
+                    traitsDescription: palmType.traitsDescription || 'Your palm reveals an adaptable personality.'
+                };
+                
+                const getLineMeaning = (lineType) => {
+                    const lines = palmData.lineMeanings?.[lineType];
+                    return Array.isArray(lines) && lines.length > 0 ? 
+                           random.pick(lines) : 
+                           `Your ${lineType.replace('Line', ' line')} shows balance and depth.`;
+                };
+                
+                const getGuidance = (type) => {
+                    const messages = palmData.guidanceMessages?.[type];
+                    return Array.isArray(messages) && messages.length > 0 ?
+                           random.pick(messages) :
+                           `Your ${type} shows potential for growth and development.`;
+                };
+                
+                return {
+                    palmType: validatedPalmType,
+                    heartLine: getLineMeaning('heartLine'),
+                    headLine: getLineMeaning('headLine'),
+                    lifeLine: getLineMeaning('lifeLine'),
+                    career: getGuidance('career'),
+                    emotional: getGuidance('emotional'),
+                    focus: getGuidance('focus'),
+                    personalTip: random.pick(palmData.personalTips) || 'Trust your instincts.',
+                    hand: appState.selectedHand || 'left',
+                    timestamp: new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                    id: Date.now()
+                };
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                return getDefaultResult();
+            }
+        }
+
+        // ===== Default Result for Error Handling =====
+        function getDefaultResult() {
+            return {
+                palmType: {
+                    name: "The Explorer",
+                    icon: "🌿",
+                    description: "You possess a curious nature and adaptable approach to life.",
+                    traits: ["Adaptable", "Curious", "Open-minded"],
+                    traitsDescription: "Your palm reveals a personality characterized by adaptability and intellectual curiosity."
+                },
+                heartLine: "Your emotional approach shows warmth and balanced expression in relationships.",
+                headLine: "Your cognitive patterns reveal a blend of intuitive insight and practical thinking.",
+                lifeLine: "Your life energy indicates resilience and continuous personal growth.",
+                career: "You thrive in environments that allow creativity and independent thinking.",
+                emotional: "Your emotional intelligence serves as a compass in relationships.",
+                focus: "When passionate, you demonstrate remarkable concentration and dedication.",
+                personalTip: "Trust your inner guidance during important decisions.",
+                hand: appState.selectedHand || 'left',
+                timestamp: new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric'
+                }),
+                id: Date.now()
+            };
+        }
+
+        // ===== Processing Animation =====
+        function runProcessingAnimation() {
+            if (appState.processingInterval) {
+                clearInterval(appState.processingInterval);
+            }
+            
+            const steps = [
+                document.getElementById('step1'),
+                document.getElementById('step2'), 
+                document.getElementById('step3'),
+                document.getElementById('step4')
+            ];
+            
+            const progressFill = document.getElementById('progressFill');
+            let currentStep = 0;
+            
+            steps.forEach(step => {
+                if (step) step.classList.remove('active');
+            });
+            
+            if (progressFill) {
+                progressFill.style.width = '0%';
+            }
+            
+            appState.processingInterval = setInterval(() => {
+                if (currentStep > 0 && steps[currentStep - 1]) {
+                    steps[currentStep - 1].classList.remove('active');
+                }
+                
+                if (currentStep < steps.length && steps[currentStep]) {
+                    steps[currentStep].classList.add('active');
+                    
+                    const progress = Math.min(100, ((currentStep + 1) * 25));
+                    if (progressFill) {
+                        progressFill.style.width = `${progress}%`;
+                    }
+                    
+                    currentStep++;
+                } else {
+                    clearInterval(appState.processingInterval);
+                    appState.processingInterval = null;
+                    
+                    if (progressFill) {
+                        progressFill.style.width = '100%';
+                    }
+                    
+                    setTimeout(() => {
+                        try {
+                            appState.resultData = analyzePalm();
+                            if (appState.resultData) {
+                                displayResults();
+                                showScreen('results');
+                            } else {
+                                throw new Error('Failed to generate results');
+                            }
+                        } catch (error) {
+                            ErrorHandler.showError('processingError', 'Analysis failed. Please try again.');
+                            showScreen('capture');
+                        }
+                    }, 800);
+                }
+            }, 1000 + Math.random() * 500);
+        }
+
+        // ===== Display Results =====
+        function displayResults() {
+            if (!appState.resultData) {
+                ErrorHandler.showError('resultsError', 'No result data available.');
+                appState.resultData = getDefaultResult();
+            }
+            
+            const result = appState.resultData;
+            const handName = result.hand === 'left' ? 'Left Hand (Innate Self)' : 'Right Hand (Developed Self)';
+            
+            const updateElement = (id, text) => {
+                try {
+                    const element = document.getElementById(id);
+                    if (element && text !== undefined && text !== null) {
+                        element.textContent = text;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to update element ${id}:`, error);
+                }
+            };
+            
+            const updateHTML = (id, html) => {
+                try {
+                    const element = document.getElementById(id);
+                    if (element && html !== undefined && html !== null) {
+                        element.innerHTML = html;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to update HTML for element ${id}:`, error);
+                }
+            };
+            
+            updateElement('userHandTitle', `${handName} Reading`);
+            updateElement('resultDate', result.timestamp || 'Today');
+            updateElement('palmTypeIcon', result.palmType?.icon || '🌿');
+            updateElement('palmTypeName', result.palmType?.name || 'The Explorer');
+            updateElement('palmTypeDesc', result.palmType?.description || 'You possess a curious nature.');
+            updateElement('heartLineText', result.heartLine || 'Your emotional approach shows warmth.');
+            updateElement('headLineText', result.headLine || 'Your cognitive patterns reveal intuitive insight.');
+            updateElement('lifeLineText', result.lifeLine || 'Your life energy indicates resilience.');
+            updateElement('careerText', result.career || 'You thrive in creative environments.');
+            updateElement('emotionalText', result.emotional || 'Your emotional intelligence guides relationships.');
+            updateElement('focusText', result.focus || 'You demonstrate concentration when passionate.');
+            updateElement('personalTip', result.personalTip || 'Trust your instincts.');
+            
+            const traits = result.palmType?.traits || ["Adaptable", "Curious"];
+            const traitsDesc = result.palmType?.traitsDescription || "Your palm reveals an adaptable personality.";
+            
+            updateHTML('traitsContent', `
+                <p>${traitsDesc}</p>
+                <p><strong>Dominant Traits:</strong> ${traits.slice(0, 3).join(' • ')}</p>
+                ${traits.length > 3 ? `<p><strong>Supporting Characteristics:</strong> ${traits.slice(3).join(' • ')}</p>` : ''}
+            `);
+        }
+
+        // ===== Save Result to History =====
+        async function saveResultToHistory() {
+            if (!appState.resultData) {
+                ErrorHandler.showError('resultsError', 'No result to save.');
+                return;
+            }
+            
+            const originalText = buttons.saveResultBtn.textContent;
+            buttons.saveResultBtn.textContent = 'Saving...';
+            buttons.saveResultBtn.disabled = true;
+            buttons.saveResultBtn.classList.add('loading');
+            
+            try {
+                const history = StorageManager.getHistory();
+                
+                const resultToSave = {
+                    ...appState.resultData,
+                    id: appState.resultData.id || Date.now(),
+                    palmImage: appState.palmImage,
+                    savedAt: new Date().toISOString()
+                };
+                
+                history.unshift(resultToSave);
+                
+                if (history.length > 20) {
+                    history.length = 20;
+                }
+                
+                const saved = StorageManager.saveHistory(history);
+                
+                if (saved) {
+                    appState.scanHistory = history;
+                    
+                    buttons.saveResultBtn.textContent = '✓ Saved!';
+                    buttons.saveResultBtn.style.background = 'linear-gradient(135deg, var(--success-color), #7a9b6c)';
+                    
+                    setTimeout(() => {
+                        buttons.saveResultBtn.textContent = originalText;
+                        buttons.saveResultBtn.disabled = false;
+                        buttons.saveResultBtn.classList.remove('loading');
+                        buttons.saveResultBtn.style.background = '';
+                    }, 1500);
+                } else {
+                    throw new Error('Save failed');
+                }
+                
+            } catch (error) {
+                console.error('Save error:', error);
+                
+                buttons.saveResultBtn.textContent = 'Error!';
+                buttons.saveResultBtn.style.background = 'linear-gradient(135deg, var(--error-color), #b36666)';
+                
+                setTimeout(() => {
+                    buttons.saveResultBtn.textContent = originalText;
+                    buttons.saveResultBtn.disabled = false;
+                    buttons.saveResultBtn.classList.remove('loading');
+                    buttons.saveResultBtn.style.background = '';
+                }, 2000);
+                
+                ErrorHandler.showError('resultsError', 'Could not save result. Storage may be full.');
+            }
+        }
+
+        // ===== Load and Display History =====
+        function loadAndDisplayHistory() {
+            try {
+                const history = StorageManager.getHistory();
+                appState.scanHistory = history;
+                
+                const historyList = document.getElementById('historyList');
+                const emptyHistory = document.getElementById('emptyHistory');
+                const historyCount = document.getElementById('historyCount');
+                
+                if (historyCount) {
+                    historyCount.textContent = history.length;
+                }
+                
+                if (history.length === 0) {
+                    if (historyList) historyList.innerHTML = '';
+                    if (emptyHistory) emptyHistory.classList.remove('hidden');
+                } else {
+                    if (emptyHistory) emptyHistory.classList.add('hidden');
+                    
+                    if (historyList) {
+                        historyList.innerHTML = '';
+                        
+                        history.forEach((item) => {
+                            const historyItem = document.createElement('div');
+                            historyItem.className = 'history-item';
+                            historyItem.dataset.id = item.id;
+                            
+                            const formattedDate = item.savedAt ? 
+                                new Date(item.savedAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                }) : 
+                                'Unknown date';
+                            
+                            historyItem.innerHTML = `
+                                <div class="history-item-content">
+                                    <div class="history-item-header">
+                                        <div class="history-item-title">${item.hand === 'left' ? 'Left Hand' : 'Right Hand'} Reading</div>
+                                        <div class="history-item-date">${formattedDate}</div>
+                                    </div>
+                                    <div class="history-item-type">${item.palmType?.name || 'Palm Analysis'}</div>
+                                    <div class="history-item-description">${(item.palmType?.description || 'Your palm analysis result').substring(0, 150)}...</div>
+                                    ${item.palmImage ? `
+                                    <div class="history-item-preview">
+                                        <img src="${item.palmImage}" alt="Palm Image" 
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="history-item-actions">
+                                    <button class="btn btn-secondary btn-small view-history-btn" data-id="${item.id}" aria-label="View this reading">View</button>
+                                    <button class="btn btn-danger btn-small delete-history-btn" data-id="${item.id}" aria-label="Delete this reading">Delete</button>
+                                </div>
+                            `;
+                            
+                            historyList.appendChild(historyItem);
+                        });
+                        
+                        document.querySelectorAll('.view-history-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const id = parseInt(btn.dataset.id);
+                                const result = history.find(item => item.id === id);
+                                if (result) {
+                                    viewHistoryResult(result);
+                                }
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-history-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const id = parseInt(btn.dataset.id);
+                                deleteHistoryResult(id);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.history-item-content').forEach(content => {
+                            content.addEventListener('click', (e) => {
+                                const historyItem = e.target.closest('.history-item');
+                                if (historyItem) {
+                                    const id = parseInt(historyItem.dataset.id);
+                                    const result = history.find(item => item.id === id);
+                                    if (result) {
+                                        viewHistoryResult(result);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+                ErrorHandler.showError('historyError', 'Could not load history.');
+                const emptyHistory = document.getElementById('emptyHistory');
+                if (emptyHistory) emptyHistory.classList.remove('hidden');
+            }
+        }
+
+        // ===== Delete History Result =====
+        function deleteHistoryResult(id) {
+            if (!confirm('Are you sure you want to delete this reading? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const history = StorageManager.getHistory();
+                const updatedHistory = history.filter(item => item.id !== id);
+                
+                const saved = StorageManager.saveHistory(updatedHistory);
+                
+                if (saved) {
+                    appState.scanHistory = updatedHistory;
+                    loadAndDisplayHistory();
+                    
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'error-message';
+                    successMsg.style.background = 'linear-gradient(135deg, var(--success-color), #7a9b6c)';
+                    successMsg.style.color = 'white';
+                    successMsg.style.border = '1px solid var(--success-color)';
+                    successMsg.textContent = 'Reading deleted successfully.';
+                    successMsg.classList.add('visible');
+                    
+                    const historyError = document.getElementById('historyError');
+                    if (historyError) {
+                        historyError.parentNode.insertBefore(successMsg, historyError.nextSibling);
+                        setTimeout(() => {
+                            successMsg.remove();
+                        }, 3000);
+                    }
+                } else {
+                    throw new Error('Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                ErrorHandler.showError('historyError', 'Could not delete reading. Please try again.');
+            }
+        }
+
+        // ===== Clear All History =====
+        function clearAllHistory() {
+            if (!confirm('Are you sure you want to clear all history? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const cleared = StorageManager.clearHistory();
+                
+                if (cleared) {
+                    appState.scanHistory = [];
+                    loadAndDisplayHistory();
+                    
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'error-message';
+                    successMsg.style.background = 'linear-gradient(135deg, var(--success-color), #7a9b6c)';
+                    successMsg.style.color = 'white';
+                    successMsg.style.border = '1px solid var(--success-color)';
+                    successMsg.textContent = 'All history cleared successfully.';
+                    successMsg.classList.add('visible');
+                    
+                    const historyError = document.getElementById('historyError');
+                    if (historyError) {
+                        historyError.parentNode.insertBefore(successMsg, historyError.nextSibling);
+                        setTimeout(() => {
+                            successMsg.remove();
+                        }, 3000);
+                    }
+                } else {
+                    throw new Error('Clear failed');
+                }
+            } catch (error) {
+                console.error('Clear history error:', error);
+                ErrorHandler.showError('historyError', 'Could not clear history. Please try again.');
+            }
+        }
+
+        // ===== View History Result =====
+        function viewHistoryResult(result) {
+            appState.resultData = result;
+            displayResults();
+            showScreen('results');
+        }
+
+        // ===== Reset Scan =====
+        function resetScan() {
+            CameraManager.stopCameraStream();
+            
+            if (appState.handDetector) {
+                appState.handDetector.stopDetection();
+            }
+            
+            if (appState.processingInterval) {
+                clearInterval(appState.processingInterval);
+                appState.processingInterval = null;
+            }
+            
+            appState.selectedHand = null;
+            appState.palmImage = null;
+            appState.resultData = null;
+            appState.cameraStream = null;
+            appState.isProcessing = false;
+            appState.hasCapturedImage = false;
+            
+            document.querySelectorAll('.hand-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            buttons.confirmHandBtn.disabled = true;
+            buttons.processPalmBtn.disabled = true;
+            buttons.capturePhotoBtn.disabled = true;
+            buttons.capturePhotoBtn.classList.remove('enabled');
+            
+            document.getElementById('uploadPreview').classList.remove('active');
+            document.getElementById('cameraContainer').classList.remove('active');
+            
+            const fileInput = document.getElementById('imageUpload');
+            if (fileInput) fileInput.value = '';
+            
+            document.querySelectorAll('.error-message, .warning-message, .success-message').forEach(el => {
+                el.classList.remove('visible');
+            });
+            
+            showScreen('welcome');
+        }
+
+        // ===== Button Event Listeners =====
+        function setupEventListeners() {
+            buttons.startBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('handSelection');
+                }
+            });
+            
+            buttons.viewHistoryBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('history');
+                }
+            });
+            
+            buttons.backToWelcomeBtn.addEventListener('click', resetScan);
+            
+            buttons.confirmHandBtn.addEventListener('click', () => {
+                if (appState.selectedHand && !appState.isLoading) {
+                    showScreen('capture');
+                }
+            });
+            
+            buttons.backToHandBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('handSelection');
+                }
+            });
+            
+            buttons.openCameraBtn.addEventListener('click', openCamera);
+            
+            setupImageUpload();
+            
+            setupCameraCapture();
+            
+            buttons.processPalmBtn.addEventListener('click', () => {
+                if (appState.hasCapturedImage && !appState.isLoading) {
+                    showScreen('processing');
+                    setTimeout(() => {
+                        runProcessingAnimation();
+                    }, 300);
+                } else {
+                    ErrorHandler.showError('captureError', 'Please capture or upload an image first.');
+                }
+            });
+            
+            buttons.newScanBtn.addEventListener('click', resetScan);
+            
+            buttons.saveResultBtn.addEventListener('click', saveResultToHistory);
+            
+            buttons.viewHistoryFromResultsBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('history');
+                }
+            });
+            
+            buttons.backFromHistoryBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('welcome');
+                }
+            });
+            
+            buttons.startFromHistoryBtn.addEventListener('click', () => {
+                if (!appState.isLoading) {
+                    showScreen('handSelection');
+                }
+            });
+            
+            buttons.clearHistoryBtn.addEventListener('click', clearAllHistory);
+            
+            window.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'none';
+            });
+            
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+            });
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    CameraManager.stopCameraStream();
+                    if (appState.handDetector) {
+                        appState.handDetector.stopDetection();
+                    }
+                }
+            });
+            
+            window.addEventListener('beforeunload', () => {
+                CameraManager.stopCameraStream();
+                if (appState.handDetector) {
+                    appState.handDetector.stopDetection();
+                }
+                if (appState.processingInterval) {
+                    clearInterval(appState.processingInterval);
+                }
+            });
+        }
+
+        // ===== Initialize App =====
+        function initializeApp() {
+            try {
+                appState.scanHistory = StorageManager.getHistory();
+                
+                const dateElement = document.getElementById('resultDate');
+                if (dateElement) {
+                    dateElement.textContent = new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                }
+                
+                setupHandSelection();
+                
+                setupEventListeners();
+                
+                if (!CameraManager.isSupported()) {
+                    ErrorHandler.showWarning('cameraWarning', 'Camera features may not be fully supported on this device.');
+                }
+                
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        scrollToTop();
+                    }, 100);
+                });
+                
+                setupScrollListener();
+                
+            } catch (error) {
+                ErrorHandler.handleCriticalError(error);
+            }
+        }
+
+        // ===== START THE APP =====
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAppLoader);
+        } else {
+            initializeAppLoader();
+        }
+    </script>
+</body>
+</html>
